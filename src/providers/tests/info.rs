@@ -1,10 +1,9 @@
 use crate::cache::manager::ChainCache;
-use crate::cache::Cache;
 use crate::common::models::backend::chains::ChainInfo;
 use crate::common::models::page::Page;
 use crate::config::{
-    chain_info_request_timeout, contract_info_request_timeout, safe_app_info_request_timeout,
-    safe_info_request_timeout, token_info_request_timeout,
+    chain_info_request_timeout, contract_info_request_timeout, safe_info_request_timeout,
+    token_info_request_timeout,
 };
 use crate::providers::address_info::ContractInfo;
 use crate::providers::info::{DefaultInfoProvider, InfoProvider, SafeAppInfo, SafeInfo, TokenInfo};
@@ -452,7 +451,7 @@ async fn default_info_provider_token_info_address_0x0() {
 }
 
 #[rocket::async_test]
-async fn default_info_provider_safe_app_info() {
+async fn default_info_provider_safe_app_info_error() {
     let origin_url = "https://app.uniswap.org";
     let cache_manager = create_cache_manager().await;
     cache_manager
@@ -465,16 +464,65 @@ async fn default_info_provider_safe_app_info() {
         .await;
 
     let mut mock_http_client = MockHttpClient::new();
-    let mut safe_app_request = Request::new(format!("{}/manifest.json", &origin_url));
-    safe_app_request.timeout(Duration::from_millis(safe_app_info_request_timeout()));
 
+    let config_service_request = Request::new(config_uri!("/v1/safe-apps/?url={}", &origin_url));
     mock_http_client
         .expect_get()
         .times(1)
-        .with(eq(safe_app_request))
+        .with(eq(config_service_request))
+        .returning(move |_| {
+            Err(ApiError::from_http_response(&Response {
+                body: "".to_string(),
+                status_code: 0,
+            }))
+        });
+
+    let context = RequestContext::setup_for_test(
+        String::from(""),
+        config_uri!(""),
+        &(Arc::new(mock_http_client) as Arc<dyn HttpClient>),
+        &(Arc::new(cache_manager) as Arc<dyn RedisCacheManager>),
+    )
+    .await;
+    let expected = Err(ApiError {
+        status: 0,
+        details: ErrorDetails {
+            code: 1337,
+            message: Some("".to_string()),
+            arguments: None,
+            debug: None,
+        },
+    });
+
+    let info_provider = DefaultInfoProvider::new("4", &context);
+    let actual = info_provider.safe_app_info(origin_url).await;
+
+    assert_eq!(expected, actual);
+}
+
+#[rocket::async_test]
+async fn default_info_provider_safe_app_info_success() {
+    let origin_url = "https://test.app";
+    let cache_manager = create_cache_manager().await;
+    cache_manager
+        .cache_for_chain(ChainCache::Mainnet)
+        .invalidate_pattern("*")
+        .await;
+    cache_manager
+        .cache_for_chain(ChainCache::Other)
+        .invalidate_pattern("*")
+        .await;
+
+    let mut mock_http_client = MockHttpClient::new();
+
+    let config_service_request = Request::new(config_uri!("/v1/safe-apps/?url={}", &origin_url));
+    mock_http_client
+        .expect_get()
+        .times(1)
+        .with(eq(config_service_request))
         .returning(move |_| {
             Ok(Response {
-                body: String::from(crate::tests::json::UNISWAP_SAFE_APP_MANIFEST),
+                body: String::from(crate::tests::json::POLYGON_SAFE_APP_URL_QUERY),
                 status_code: 200,
             })
         });
@@ -486,13 +534,14 @@ async fn default_info_provider_safe_app_info() {
         &(Arc::new(cache_manager) as Arc<dyn RedisCacheManager>),
     )
     .await;
+
     let expected = Ok(SafeAppInfo {
-        name: String::from("Uniswap"),
-        url: String::from(origin_url),
-        logo_uri: format!("{}/{}", &origin_url, "./images/256x256_App_Icon_Pink.svg"),
+        name: String::from("Test App"),
+        url: String::from("https://test.app"),
+        logo_uri: format!("{}/{}", "https://test.app", "logo.svg"),
     });
 
-    let info_provider = DefaultInfoProvider::new("4", &context);
+    let info_provider = DefaultInfoProvider::new("137", &context);
     let actual = info_provider.safe_app_info(origin_url).await;
 
     assert_eq!(expected, actual);
@@ -512,18 +561,17 @@ async fn default_info_provider_safe_app_info_not_found() {
         .await;
 
     let mut mock_http_client = MockHttpClient::new();
-    let mut safe_app_request = Request::new(format!("{}/manifest.json", &origin_url));
-    safe_app_request.timeout(Duration::from_millis(safe_app_info_request_timeout()));
 
+    let config_service_request = Request::new(config_uri!("/v1/safe-apps/?url={}", &origin_url));
     mock_http_client
         .expect_get()
         .times(1)
-        .with(eq(safe_app_request))
+        .with(eq(config_service_request))
         .returning(move |_| {
-            Err(ApiError::from_http_response(&Response {
-                status_code: 404,
-                body: String::from("Not found"),
-            }))
+            Ok(Response {
+                body: String::from("[]"),
+                status_code: 200,
+            })
         });
 
     let context = RequestContext::setup_for_test(
@@ -533,10 +581,15 @@ async fn default_info_provider_safe_app_info_not_found() {
         &(Arc::new(cache_manager) as Arc<dyn RedisCacheManager>),
     )
     .await;
-    let expected = Err(ApiError::new_from_message_with_code(
-        404,
-        String::from("Not found"),
-    ));
+    let expected = Err(ApiError {
+        status: 404,
+        details: ErrorDetails {
+            code: 404,
+            message: Some("No Safe Apps match the url".to_string()),
+            arguments: None,
+            debug: None,
+        },
+    });
 
     let info_provider = DefaultInfoProvider::new("4", &context);
     let actual = info_provider.safe_app_info(origin_url).await;
