@@ -4,11 +4,10 @@ use crate::utils::context::RequestContext;
 use crate::utils::errors::ApiResult;
 use rocket::response::content;
 use rocket::serde::json::Json;
+use rocket_okapi::openapi;
 
-#[get(
-    "/v1/chains/<chain_id>/delegates?<safe>&<delegate>&<delegator>&<label>",
-    format = "application/json"
-)]
+#[openapi(tag = "Delegates")]
+#[get("/v1/chains/<chain_id>/delegates?<safe>&<delegate>&<delegator>&<label>")]
 pub async fn get_delegates<'e>(
     context: RequestContext,
     chain_id: String,
@@ -16,13 +15,14 @@ pub async fn get_delegates<'e>(
     delegate: Option<String>,
     delegator: Option<String>,
     label: Option<String>,
-) -> ApiResult<content::Json<String>> {
+) -> ApiResult<content::RawJson<String>> {
     let json = serde_json::to_string(
         &handlers::get_delegates(&context, chain_id, safe, delegate, delegator, label).await?,
     )?;
-    Ok(content::Json(json))
+    Ok(content::RawJson(json))
 }
 
+#[openapi(tag = "Delegates")]
 #[post(
     "/v1/chains/<chain_id>/delegates",
     format = "application/json",
@@ -36,6 +36,7 @@ pub async fn post_delegate<'e>(
     return handlers::post_delegate(&context, chain_id, safe_delegate.0).await;
 }
 
+#[openapi(tag = "Delegates")]
 #[delete(
     "/v1/chains/<chain_id>/delegates/<delegate_address>",
     format = "application/json",
@@ -51,6 +52,7 @@ pub async fn delete_delegate<'e>(
         .await;
 }
 
+#[openapi(tag = "Delegates")]
 #[delete(
     "/v1/chains/<chain_id>/safes/<safe_address>/delegates/<delegate_address>",
     format = "application/json",

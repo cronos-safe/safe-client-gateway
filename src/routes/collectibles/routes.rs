@@ -2,7 +2,7 @@ use crate::routes::collectibles::handlers::collectibles;
 use crate::utils::context::RequestContext;
 use crate::utils::errors::ApiResult;
 use rocket::response::content;
-
+use rocket_okapi::openapi;
 /// `/v1/chains/<chain_id>/safes/<safe_address>/collectibles?<trusted>&<exclude_spam>` <br />
 /// Returns collectibles from the transaction handlers
 ///
@@ -147,6 +147,7 @@ use rocket::response::content;
 /// ]
 /// ```
 /// </details>
+#[openapi(tag = "Collectibles")]
 #[get("/v1/chains/<chain_id>/safes/<safe_address>/collectibles?<trusted>&<exclude_spam>")]
 pub async fn get_collectibles(
     context: RequestContext,
@@ -154,7 +155,7 @@ pub async fn get_collectibles(
     safe_address: String,
     trusted: Option<bool>,
     exclude_spam: Option<bool>,
-) -> ApiResult<content::Json<String>> {
+) -> ApiResult<content::RawJson<String>> {
     collectibles(
         &context,
         chain_id.as_str(),

@@ -5,6 +5,7 @@ use crate::routes::chains::handlers::{get_chains_paginated, get_single_chain};
 use crate::utils::context::RequestContext;
 use crate::utils::errors::ApiResult;
 use rocket::response::content;
+use rocket_okapi::openapi;
 
 /// `/v1/chains/<chain_id>/` <br/>
 /// Returns [ChainInfo](crate::routes::chains::models::ChainInfo)
@@ -16,11 +17,12 @@ use rocket::response::content;
 /// ## Path
 ///
 /// - `/v1/chains/<chain_id>/`returns the `ChainInfo` for `<chain_id>`
+#[openapi(tag = "Chains")]
 #[get("/v1/chains/<chain_id>")]
 pub async fn get_chain(
     context: RequestContext,
     chain_id: String,
-) -> ApiResult<content::Json<String>> {
+) -> ApiResult<content::RawJson<String>> {
     CacheResponse::new(&context, ChainCache::from(chain_id.as_str()))
         .duration(chain_info_response_cache_duration())
         .resp_generator(|| get_single_chain(&context, &chain_id))
@@ -38,11 +40,12 @@ pub async fn get_chain(
 /// ## Path
 ///
 /// - `/v1/chains/` Returns the `ChainInfo` for our services supported networks
+#[openapi(tag = "Chains")]
 #[get("/v1/chains?<cursor>")]
 pub async fn get_chains(
     context: RequestContext,
     cursor: Option<String>,
-) -> ApiResult<content::Json<String>> {
+) -> ApiResult<content::RawJson<String>> {
     CacheResponse::new(&context, ChainCache::Other)
         .duration(chain_info_response_cache_duration())
         .resp_generator(|| get_chains_paginated(&context, &cursor))

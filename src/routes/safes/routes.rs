@@ -8,15 +8,16 @@ use crate::utils::context::RequestContext;
 use crate::utils::errors::ApiResult;
 use rocket::response::content;
 use rocket::serde::json::{Error, Json};
-
+use rocket_okapi::openapi;
 /// `/v1/chains/<chain_id>/safes/<safe_address>` <br />
 /// Returns [SafeState](crate::routes::safes::models::SafeState)
+#[openapi(tag = "Safes")]
 #[get("/v1/chains/<chain_id>/safes/<safe_address>")]
 pub async fn get_safe_info(
     context: RequestContext,
     chain_id: String,
     safe_address: String,
-) -> ApiResult<content::Json<String>> {
+) -> ApiResult<content::RawJson<String>> {
     CacheResponse::new(&context, ChainCache::from(chain_id.as_str()))
         .resp_generator(|| get_safe_info_ex(&context, &chain_id, &safe_address))
         .execute()
@@ -27,12 +28,13 @@ pub async fn get_safe_info(
 /// Returns [Vec] of [String]
 ///
 /// Returns a list of Safes for which the address is an owner
+#[openapi(tag = "Safes")]
 #[get("/v1/chains/<chain_id>/owners/<owner_address>/safes")]
 pub async fn get_owners(
     context: RequestContext,
     chain_id: String,
     owner_address: String,
-) -> ApiResult<content::Json<String>> {
+) -> ApiResult<content::RawJson<String>> {
     CacheResponse::new(&context, ChainCache::from(chain_id.as_str()))
         .resp_generator(|| get_owners_for_safe(&context, &chain_id, &owner_address))
         .duration(owners_for_safes_cache_duration())
@@ -73,6 +75,7 @@ pub async fn get_owners(
 ///   "safeTxGas": "63417"
 /// }
 /// ```
+
 #[post(
     "/v1/chains/<chain_id>/safes/<safe_address>/multisig-transactions/estimations",
     format = "application/json",
@@ -83,8 +86,8 @@ pub async fn post_safe_gas_estimation<'e>(
     chain_id: String,
     safe_address: String,
     safe_transaction_estimation_request: Result<Json<SafeTransactionEstimationRequest>, Error<'e>>,
-) -> ApiResult<content::Json<String>> {
-    Ok(content::Json(serde_json::to_string(
+) -> ApiResult<content::RawJson<String>> {
+    Ok(content::RawJson(serde_json::to_string(
         &estimations::estimate_safe_tx_gas(
             &context,
             &chain_id,
@@ -140,8 +143,8 @@ pub async fn post_safe_gas_estimation_v2<'e>(
     chain_id: String,
     safe_address: String,
     safe_transaction_estimation_request: Result<Json<SafeTransactionEstimationRequest>, Error<'e>>,
-) -> ApiResult<content::Json<String>> {
-    Ok(content::Json(serde_json::to_string(
+) -> ApiResult<content::RawJson<String>> {
+    Ok(content::RawJson(serde_json::to_string(
         &estimations::estimate_safe_tx_gas_v2(
             &context,
             &chain_id,
