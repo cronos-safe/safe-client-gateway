@@ -3,7 +3,7 @@ use rocket::serde::json::{json, Value};
 use rocket::{Catcher, Route};
 use rocket_okapi::openapi_get_routes;
 
-use crate::config::is_preview_endpoint_enabled;
+use crate::config::is_messages_feature_enabled;
 
 /// # About endpoint
 pub mod about;
@@ -20,6 +20,7 @@ pub mod delegates;
 pub mod health;
 #[doc(hidden)]
 pub mod hooks;
+pub mod messages;
 /// # Notification endpoints
 pub mod notifications;
 /// # SafeApps endpoints
@@ -43,6 +44,7 @@ pub fn active_routes() -> Vec<Route> {
         safes::routes::post_safe_gas_estimation,
         safes::routes::post_safe_gas_estimation_v2,
         transactions::routes::post_confirmation,
+        transactions::routes::post_preview_transaction,
         transactions::routes::post_transaction,
         // This endpoints shouldn't be exposed on swagger
         about::routes::redis,
@@ -53,8 +55,13 @@ pub fn active_routes() -> Vec<Route> {
         hooks::routes::flush,
     ];
 
-    let preview_route = if is_preview_endpoint_enabled() {
-        routes![transactions::routes::post_preview_transaction]
+    let messages_routes = if is_messages_feature_enabled() {
+        routes![
+            messages::create_message::route,
+            messages::get_message::route,
+            messages::get_messages::route,
+            messages::update_message::route,
+        ]
     } else {
         routes![]
     };
@@ -87,7 +94,7 @@ pub fn active_routes() -> Vec<Route> {
         transactions::routes::get_multisig_transactions,
         health::routes::health
     ];
-    return [&no_openapi[..], &preview_route[..], &openapi[..]].concat();
+    return [&no_openapi[..], &messages_routes[..], &openapi[..]].concat();
 }
 
 #[doc(hidden)]

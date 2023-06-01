@@ -1,13 +1,13 @@
 {
     "next": null, 
-    "previous": "http://test.gnosis.io/v2/chains/4/safes/0x1230B3d59858296A31053C1b8562Ecf89A2f888b/collectibles?cursor=limit%3D3%26offset%3D0&trusted=false&exclude_spam=true", 
+    "previous": "http://test.safe.global/v2/chains/4/safes/0x1230B3d59858296A31053C1b8562Ecf89A2f888b/collectibles?cursor=limit%3D3%26offset%3D0&trusted=false&exclude_spam=true", 
     "results":
     [
     {
         "address": "0xAad76bea7CFEc82927239415BB18D2e93518ecBB",
         "tokenName": ".crypto",
         "tokenSymbol": "UD",
-        "logoUri": "https://gnosis-safe-token-logos.s3.amazonaws.com/0xAad76bea7CFEc82927239415BB18D2e93518ecBB.png",
+        "logoUri": "https://example.com/0xAad76bea7CFEc82927239415BB18D2e93518ecBB.png",
         "id": "65064849277095008645805721699881592934207592453433429843849505605132523369844",
         "uri": "https://metadata.staging.unstoppabledomains.com/metadata/udtestdev-8f3755.crypto",
         "name": "udtestdev-8f3755.crypto",
